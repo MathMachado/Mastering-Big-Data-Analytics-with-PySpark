@@ -25,9 +25,8 @@ def re_search(pattern, text, plural=False):
     match = [m.group(1) for m in re.finditer(pattern, text)]
     if plural:
         return match
-    else:
-        if match:
-            return match[0]
+    if match:
+        return match[0]
 
 
 def look_ahead(iter_item):
@@ -179,7 +178,7 @@ class Course:
         """
         logger.info("Building Docker image")
         build_logger = logging.getLogger("docker.api.build")
-        progress_log = dict()
+        progress_log = {}
 
         # Using low level Docker API to be able to report status
         # Builds can take a while!
@@ -200,44 +199,58 @@ class Course:
             status = log.get("status")
             progress_detail = log.get("progressDetail")
             i_d = log.get("id", None)
-            if i_d:
-                if status in ["Downloading", "Extracting"] and progress_detail:
-                    progress_log[i_d] = {
-                        "status": status,
-                        "total": progress_detail.get("total", 1),
-                        "current": progress_detail.get("current", 0),
-                    }
+            if i_d and status in ["Downloading", "Extracting"] and progress_detail:
+                progress_log[i_d] = {
+                    "status": status,
+                    "total": progress_detail.get("total", 1),
+                    "current": progress_detail.get("current", 0),
+                }
 
             # Report progress every few lines from the stream
             if (last or (i + 1) % 100 == 0) and progress_log.__len__() > 0:
                 # Construct log message
                 build_logger.info(
-                    " {total_progress} | {total} Packages, {downloading} Downloading, "
-                    "{extracting} Extracted".format(
-                        downloading=len(
-                            [
-                                log
-                                for log in progress_log.values()
-                                if log.get("status") == "Downloading"
-                            ]
-                        ),
-                        extracting=len(
-                            [
-                                log
-                                for log in progress_log.values()
-                                if log.get("status") == "Extracting"
-                            ]
-                        ),
-                        total_progress="{0:.2f}%".format(
-                            (
-                                float(sum([v["current"] for v in progress_log.values()]))
-                                / float(sum([v["total"] for v in progress_log.values()]))
-                            )
-                            * 100
-                        ),
-                        total=progress_log.__len__(),
+                    (
+                        " {total_progress} | {total} Packages, {downloading} Downloading, "
+                        "{extracting} Extracted".format(
+                            downloading=len(
+                                [
+                                    log
+                                    for log in progress_log.values()
+                                    if log.get("status") == "Downloading"
+                                ]
+                            ),
+                            extracting=len(
+                                [
+                                    log
+                                    for log in progress_log.values()
+                                    if log.get("status") == "Extracting"
+                                ]
+                            ),
+                            total_progress="{0:.2f}%".format(
+                                (
+                                    (
+                                        float(
+                                            sum(
+                                                v["current"]
+                                                for v in progress_log.values()
+                                            )
+                                        )
+                                        / float(
+                                            sum(
+                                                v["total"]
+                                                for v in progress_log.values()
+                                            )
+                                        )
+                                    )
+                                    * 100
+                                )
+                            ),
+                            total=progress_log.__len__(),
+                        )
                     )
                 )
+
 
         build_logger.info("Image was built successfully")
         self.image = self.get_image(self.tag)
